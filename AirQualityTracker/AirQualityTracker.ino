@@ -6,7 +6,7 @@ const int chipSelect = 10;
 File myFile;
 
 String myFileName = "logfile.csv";
-String headerStr = "";
+String headerStr = "Date & Time, T_DHT11, T_Thermistor, rHum_DHT11";
 
 // RTC Module
 #include <Wire.h>     //needed because DS3231 uses I2C Bus
@@ -55,7 +55,7 @@ void initRTC()
   rtc.begin();
   
   // use the following line only to set the time of the RTC module, not in every programming application!
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));  
+  // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));  
 }
 
 String getTime()
@@ -113,17 +113,7 @@ String getDateTime(){
   return dateTimeStr;
 }
 
-void setup() {
-  initSDCard(myFileName, headerStr);
-  initRTC();
-}
-
-void loop() {
-  String myDataString = "";
-
-  myDataString += getDateTime();
-  myDataString += ", ";
-
+void getAirQualityData(float &temp_TC_Thermistor, float &temp_rHum_DHT11, float &temp_T_DHT11){
   float T_DHT11 = 0.0;
   float rHum_DHT11 = 0.0;
   byte data_DHT11[40] = {0};
@@ -137,6 +127,40 @@ void loop() {
   float TC_Thermistor = TK_Thermistor - 273.15;            // Convert Kelvin to Celcius
   float TF_Thermistor = (TC_Thermistor * 9.0) / 5.0 + 32.0; // Convert Celcius to Fahrenheit
 
+  temp_TC_Thermistor += TC_Thermistor;
+  temp_T_DHT11 += T_DHT11;
+  temp_rHum_DHT11 += rHum_DHT11;
+}
+
+void setup() {
+  initSDCard(myFileName, headerStr);
+  initRTC();
+}
+
+void loop() {
+
+  float temp_TC_Thermistor = 0;
+  float temp_rHum_DHT11 = 0;
+  float temp_T_DHT11 = 0;
+  
+  float TC_Thermistor = 0;
+  float rHum_DHT11 = 0;
+  float T_DHT11 = 0;
+  
+  for (int i = 0; i <= 10; i++) {
+    getAirQualityData(temp_TC_Thermistor, temp_rHum_DHT11, temp_T_DHT11);
+    delay(500);
+  }
+  
+  TC_Thermistor = temp_TC_Thermistor/10;
+  rHum_DHT11 = temp_rHum_DHT11/10;
+  T_DHT11 = temp_T_DHT11/10;
+  
+  String myDataString = "";
+
+  myDataString += getDateTime();
+  myDataString += ", ";
+
   myDataString += T_DHT11;
   myDataString += ", ";
   myDataString += TC_Thermistor;
@@ -145,5 +169,5 @@ void loop() {
 
   writeToSDCard(myFileName, myDataString);
 
-  delay(1000);
+  delay(10000);
 }
